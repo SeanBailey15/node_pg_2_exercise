@@ -24,7 +24,7 @@ app.use(function (req, res, next) {
 app.use((err, req, res, next) => {
   let status = err.status || 500;
 
-  return res.json({
+  return res.status(status).json({
     error: {
       message: err.message,
       status: status,

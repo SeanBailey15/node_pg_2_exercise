@@ -51,7 +51,7 @@ router.post("/", async (req, res, next) => {
       [code, name, description]
     );
 
-    return res.status(201).json(results.rows);
+    return res.status(201).json({ company: results.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -68,10 +68,13 @@ router.put("/:code", async (req, res, next) => {
     );
 
     if (results.rows.length === 0) {
-      throw new ExpressError(`Cannot find company with the code of ${code}`);
+      throw new ExpressError(
+        `Cannot find company with the code of ${code}`,
+        404
+      );
     }
 
-    return res.json(results.rows);
+    return res.json({ company: results.rows[0] });
   } catch (err) {
     next(err);
   }
