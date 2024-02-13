@@ -199,7 +199,7 @@ describe("POST /invoices", () => {
 });
 
 describe("PUT /invoices/:id", () => {
-  test("Updates a single invoice", async () => {
+  test("Updates a single invoice without changing 'paid' property (no change in paid date)", async () => {
     const res = await request(app).put(`/invoices/${testInvoice.id}`).send({
       amt: 2222,
     });
@@ -224,6 +224,83 @@ describe("PUT /invoices/:id", () => {
       error: {
         message: "Cannot find invoice with the id of 0",
         status: 404,
+      },
+    });
+  });
+});
+
+describe("PUT /invoices/:id - setting paid property to true", () => {
+  test("Updates a single invoice, changing 'paid' property to true (adds a date to the 'paid_date' property)", async () => {
+    const res = await request(app).put(`/invoices/${testInvoice.id}`).send({
+      amt: 2222,
+      paid: true,
+    });
+    const updatedRes = await db.query(`SELECT * FROM invoices WHERE id=$1`, [
+      testInvoice.id,
+    ]);
+    const updatedInvoice = updatedRes.rows[0];
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      invoice: {
+        id: testInvoice.id,
+        comp_code: testInvoice.comp_code,
+        amt: 2222,
+        paid: true,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: updatedInvoice.paid_date.toJSON(),
+      },
+    });
+  });
+});
+
+describe("PUT /invoices/:id = setting paid property to false", () => {
+  test("Updates a single invoice, changing 'paid' property to true at first, then back to false (sets 'paid_date' property to null)", async () => {
+    // Update paid property to true then check resulting database entry
+    const trueRes = await request(app).put(`/invoices/${testInvoice.id}`).send({
+      amt: 2222,
+      paid: true,
+    });
+    const updatedResTrue = await db.query(
+      `SELECT * FROM invoices WHERE id=$1`,
+      [testInvoice.id]
+    );
+    const updatedInvoiceTrue = updatedResTrue.rows[0];
+    expect(trueRes.statusCode).toBe(200);
+    expect(testInvoice.id).toEqual(updatedInvoiceTrue.id);
+    expect(trueRes.body).toEqual({
+      invoice: {
+        id: testInvoice.id,
+        comp_code: testInvoice.comp_code,
+        amt: 2222,
+        paid: true,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: updatedInvoiceTrue.paid_date.toJSON(),
+      },
+    });
+
+    // Update paid property back to false then check resulting database entry
+    const falseRes = await request(app)
+      .put(`/invoices/${testInvoice.id}`)
+      .send({
+        amt: 3333,
+        paid: false,
+      });
+    const updatedResFalse = await db.query(
+      `SELECT * FROM invoices WHERE id=$1`,
+      [testInvoice.id]
+    );
+    const updatedInvoiceFalse = updatedResFalse.rows[0];
+    expect(falseRes.statusCode).toBe(200);
+    expect(testInvoice.id).toEqual(updatedInvoiceFalse.id);
+    expect(falseRes.body).toEqual({
+      invoice: {
+        id: testInvoice.id,
+        comp_code: testInvoice.comp_code,
+        amt: 3333,
+        paid: false,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: null,
       },
     });
   });
