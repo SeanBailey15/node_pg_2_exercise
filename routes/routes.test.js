@@ -27,6 +27,9 @@ afterAll(async () => {
   await db.end();
 });
 
+//**********************************************************************
+// /companies tests:
+
 describe("GET /companies", () => {
   test("Get a list of all companies", async () => {
     const res = await request(app).get(`/companies`);
@@ -121,6 +124,124 @@ describe("DELETE /companies/:code", () => {
     expect(res.body).toEqual({
       error: {
         message: "Cannot find company with the code of nothere",
+        status: 404,
+      },
+    });
+  });
+});
+
+//**********************************************************************
+// /invoices tests:
+
+describe("GET /invoices", () => {
+  test("Get a list of all invoices", async () => {
+    const res = await request(app).get(`/invoices`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      invoices: [
+        {
+          id: testInvoice.id,
+          comp_code: testInvoice.comp_code,
+          amt: testInvoice.amt,
+          paid: testInvoice.paid,
+          add_date: testInvoice.add_date.toJSON(),
+          paid_date: testInvoice.paid_date,
+        },
+      ],
+    });
+  });
+});
+
+describe("GET /invoices/:id", () => {
+  test("Get a specific invoice", async () => {
+    const res = await request(app).get(`/invoices/${testInvoice.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      invoice: {
+        id: testInvoice.id,
+        comp_code: testInvoice.comp_code,
+        amt: testInvoice.amt,
+        paid: testInvoice.paid,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: testInvoice.paid_date,
+      },
+    });
+  });
+  test("Responds with 404 for invalid code", async () => {
+    const res = await request(app).get(`/invoices/0`);
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toEqual({
+      error: {
+        message: "Cannot find invoice with the id of 0",
+        status: 404,
+      },
+    });
+  });
+});
+
+describe("POST /invoices", () => {
+  test("Creates a single invoice", async () => {
+    const res = await request(app).post("/invoices").send({
+      comp_code: "testco",
+      amt: 99.99,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toEqual({
+      invoice: {
+        id: testInvoice.id + 1,
+        comp_code: "testco",
+        amt: 99.99,
+        paid: false,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: null,
+      },
+    });
+  });
+});
+
+describe("PUT /invoices/:id", () => {
+  test("Updates a single invoice", async () => {
+    const res = await request(app).put(`/invoices/${testInvoice.id}`).send({
+      amt: 2222,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      invoice: {
+        id: testInvoice.id,
+        comp_code: testInvoice.comp_code,
+        amt: 2222,
+        paid: testInvoice.paid,
+        add_date: testInvoice.add_date.toJSON(),
+        paid_date: testInvoice.paid_date,
+      },
+    });
+  });
+  test("Responds with 404 for invalid code", async () => {
+    const res = await request(app).put(`/invoices/0`).send({
+      amt: 9999,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toEqual({
+      error: {
+        message: "Cannot find invoice with the id of 0",
+        status: 404,
+      },
+    });
+  });
+});
+
+describe("DELETE /invoices/:id", () => {
+  test("Deletes a single invoice", async () => {
+    const res = await request(app).delete(`/invoices/${testInvoice.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ message: `Deleted invoice ${testInvoice.id}` });
+  });
+  test("Responds with 404 for invalid code", async () => {
+    const res = await request(app).delete(`/invoices/0`);
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toEqual({
+      error: {
+        message: "Cannot find invoice with the id of 0",
         status: 404,
       },
     });

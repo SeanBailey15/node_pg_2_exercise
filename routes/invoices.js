@@ -48,7 +48,7 @@ router.put("/:id", async (req, res, next) => {
 
     const invoice = await db.query(`SELECT * FROM invoices WHERE id=$1`, [id]);
     if (invoice.rows.length === 0) {
-      throw new ExpressError(`Cannot find invoice with the id of ${id}`);
+      throw new ExpressError(`Cannot find invoice with the id of ${id}`, 404);
     }
     const results = await db.query(
       `UPDATE invoices SET amt=$1 WHERE id=$2 RETURNING id, amt`,
