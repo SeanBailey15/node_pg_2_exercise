@@ -18,9 +18,12 @@ router.get("/:code", async (req, res, next) => {
   try {
     const { code } = req.params;
 
-    const results = await db.query(`SELECT * FROM companies WHERE code=$1`, [
-      code,
-    ]);
+    const results = await db.query(
+      `SELECT *
+      FROM companies
+      WHERE companies.code=$1`,
+      [code]
+    );
 
     if (results.rows.length === 0)
       throw new ExpressError(
@@ -33,9 +36,19 @@ router.get("/:code", async (req, res, next) => {
       [code]
     );
 
+    const industryRes = await db.query(
+      `SELECT *
+      FROM industries
+      LEFT JOIN company_industries ON industries.code = company_industries.ind_code
+      WHERE company_industries.comp_code=$1`,
+      [code]
+    );
+
     const company = results.rows[0];
     const invoices = invoicesRes.rows;
     company.invoices = invoices.map((inv) => inv.id);
+    const industries = industryRes.rows;
+    company.industries = industries.map((ind) => ind.industry);
 
     return res.json({ company: company });
   } catch (err) {

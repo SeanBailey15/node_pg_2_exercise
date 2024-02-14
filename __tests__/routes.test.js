@@ -6,19 +6,33 @@ const db = require("../db");
 
 let testCompany;
 let testInvoice;
+let testIndustry;
 
 beforeEach(async () => {
   const compResult = await db.query(
-    `INSERT INTO companies (code, name, description) VALUES ('testco', 'Test Co.', 'Software testing services') RETURNING code, name, description`
+    `INSERT INTO companies (code, name, description) VALUES ($1, $2, $3) RETURNING *`,
+    ["testco", "Test Co.", "Software testing services"]
   );
   testCompany = compResult.rows[0];
   const invResult = await db.query(
-    ` INSERT INTO invoices (comp_code, amt, paid, paid_date) VALUES ('testco', 600.50, false, null) RETURNING *`
+    ` INSERT INTO invoices (comp_code, amt, paid, paid_date) VALUES ($1, $2, $3, $4) RETURNING *`,
+    ["testco", 600.5, false, null]
   );
   testInvoice = invResult.rows[0];
+  const indResult = await db.query(
+    `INSERT INTO industries (code, industry) VALUES ($1, $2) RETURNING *`,
+    ["game", "Gaming"]
+  );
+  testIndustry = indResult.rows[0];
+  const association = await db.query(
+    `INSERT INTO company_industries (comp_code, ind_code) VALUES ($1, $2)`,
+    [testCompany.code, testIndustry.code]
+  );
 });
 
 afterEach(async () => {
+  await db.query(`DELETE FROM company_industries`);
+  await db.query(`DELETE FROM industries`);
   await db.query(`DELETE FROM companies`);
   await db.query(`DELETE FROM invoices`);
 });
@@ -48,6 +62,7 @@ describe("GET /companies/:code", () => {
         name: testCompany.name,
         description: testCompany.description,
         invoices: [testInvoice.id],
+        industries: [testIndustry.industry],
       },
     });
     expect(res.body.company.invoices[0]).toEqual(testInvoice.id);
@@ -319,6 +334,68 @@ describe("DELETE /invoices/:id", () => {
       error: {
         message: "Cannot find invoice with the id of 0",
         status: 404,
+      },
+    });
+  });
+});
+
+//**********************************************************************
+// /industries tests:
+
+describe("GET /industries", () => {
+  test("Get a list of all industries with company codes", async () => {
+    const res = await request(app).get(`/industries`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      industries: [
+        {
+          Gaming: [testCompany.code],
+        },
+      ],
+    });
+  });
+});
+
+describe("POST /industries", () => {
+  test("Creates a single industry", async () => {
+    const res = await request(app).post("/industries").send({
+      code: "tech",
+      industry: "Technology",
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toEqual({
+      industry: {
+        code: "tech",
+        industry: "Technology",
+      },
+    });
+  });
+});
+
+describe("POST /industries/:ind_code", () => {
+  test("Associates a company with an industry", async () => {
+    const newCompRes = await db.query(
+      `INSERT INTO companies (code, name, description) VALUES ($1, $2, $3) RETURNING *`,
+      ["apple", "Apple Computer", "Maker of OSX"]
+    );
+    const newCompany = newCompRes.rows[0];
+
+    const newIndRes = await db.query(
+      `INSERT INTO industries (code, industry) VALUES ($1,$2) RETURNING *`,
+      ["cpu", "Computers"]
+    );
+    const newIndustry = newIndRes.rows[0];
+
+    const res = await request(app)
+      .post(`/industries/${newIndustry.code}`)
+      .send({
+        comp_code: newCompany.code,
+      });
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toEqual({
+      association: {
+        comp_code: newCompany.code,
+        ind_code: newIndustry.code,
       },
     });
   });
