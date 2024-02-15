@@ -31,7 +31,7 @@ At the time of publication, I can only provide instructions for installation usi
 
 5. **Navigate into the app directory:**  
    
-   ```$ cd node_pg_1_exercise```  
+   ```$ cd node_pg_2_exercise```  
 
 6. **Install app requirements:**  
    
